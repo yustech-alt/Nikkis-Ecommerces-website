@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Dark mode (default) ── */
+:root, [data-theme="dark"] {
+  --bg-primary:    #0a0a0a;
+  --bg-secondary:  #0d0d0d;
+  --bg-card:       #111111;
+  --bg-elevated:   #1a1a1a;
+  --bg-input:      #111111;
+
+  --border:        #1f1f1f;
+  --border-hover:  #2a2a2a;
+
+  --text-primary:  #ffffff;
+  --text-secondary:#a1a1aa;
+  --text-muted:    #52525b;
+  --text-faint:    #3f3f46;
+
+  --accent:        #a855f7;
+  --accent-hover:  #9333ea;
+  --accent-faint:  rgba(168,85,247,0.15);
+  --accent-border: rgba(168,85,247,0.30);
+
+  --danger:        #f43f5e;
+  --success:       #22c55e;
+}
+
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f9f9f9;
+  --bg-card:       #ffffff;
+  --bg-elevated:   #f3f3f3;
+  --bg-input:      #f9f9f9;
+
+  --border:        #e5e5e5;
+  --border-hover:  #d4d4d4;
+
+  --text-primary:  #0a0a0a;
+  --text-secondary:#52525b;
+  --text-muted:    #a1a1aa;
+  --text-faint:    #d4d4d8;
+
+  --accent:        #9333ea;
+  --accent-hover:  #7c3aed;
+  --accent-faint:  rgba(147,51,234,0.10);
+  --accent-border: rgba(147,51,234,0.25);
+
+  --danger:        #e11d48;
+  --success:       #16a34a;
+}
+
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.syne { font-family: 'Syne', sans-serif; }
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
