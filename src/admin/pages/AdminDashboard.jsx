@@ -1,7 +1,8 @@
-import { useMemo } from "react";
-import { useOrder } from "../../context/OrderContext";
-import { products } from "../../data/products";
+import { useState, useEffect, useMemo } from "react";
+import { getOrders } from "../../services/orderService";
+import { getProducts } from "../../services/productService";
 import AdminLayout from "../components/AdminLayout";
+import { formatPrice } from "../../lib/format";
 
 function StatCard({ label, value, sub, icon, color }) {
   return (
@@ -27,7 +28,24 @@ function StatCard({ label, value, sub, icon, color }) {
 }
 
 export default function AdminDashboard() {
-  const { orders } = useOrder();
+const [orders,   setOrders]   = useState([]);
+const [products, setProducts] = useState([]);
+const [loading,  setLoading]  = useState(true);
+
+useEffect(() => {
+  const fetch = async () => {
+    try {
+      const [o, p] = await Promise.all([getOrders(), getProducts()]);
+      setOrders(o);
+      setProducts(p);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetch();
+}, []);
 
   const stats = useMemo(() => {
     const revenue     = orders.reduce((sum, o) => sum + o.total, 0);
@@ -45,6 +63,17 @@ export default function AdminDashboard() {
     delivered: "#22c55e",
     cancelled: "#f43f5e",
   };
+
+  if (loading) {
+  return (
+    <AdminLayout>
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-2 rounded-full animate-spin"
+          style={{ borderColor: "#a855f7", borderTopColor: "transparent" }} />
+      </div>
+    </AdminLayout>
+  );
+}
 
   return (
     <AdminLayout>

@@ -4,6 +4,7 @@ import { useCart } from "../../context/CartContext";
 import { useToast } from "../../context/ToastContext";
 import StarRating from "./StarRating";
 import Badge from "./Badge";
+import { formatPrice } from "../../lib/format";
 
 export default function ProductCard({ product }) {
   const { addItem }  = useCart();
@@ -89,7 +90,7 @@ export default function ProductCard({ product }) {
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className="font-bold text-base" style={{ color: "var(--text-primary)" }}>
-              ${product.price.toFixed(2)}
+              {formatPrice(product.price)}
             </span>
             <span className="text-xs line-through" style={{ color: "var(--text-muted)" }}>
               ${product.oldPrice.toFixed(2)}

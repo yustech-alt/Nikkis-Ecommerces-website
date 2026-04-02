@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useOrder } from "../context/OrderContext";
 import Button from "../components/ui/Button";
+import { initializePaystack } from "../lib/paystack";
+import { useToast } from "../context/ToastContext";
+import { formatPrice } from "../lib/format";
+
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
@@ -36,6 +40,7 @@ const labelStyle = {
 };
 
 export default function Checkout() {
+  const { addToast } = useToast();
   const navigate = useNavigate();
   const { cart, cartTotal, clearCart } = useCart();
   const { placeOrder } = useOrder();
@@ -119,16 +124,54 @@ export default function Checkout() {
     if (step === 2 && validateStep2()) setStep(3);
   };
 
-  const handleSubmit = async () => {
-    if (!validateStep3()) return;
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1500));
+ const handleSubmit = async () => {
+  if (!validateStep3()) return;
 
-    const order = placeOrder({
+  if (paymentMethod === "card") {
+    // Real Paystack payment
+    initializePaystack({
+      email:   form.email,
+      amount:  total,
+      onSuccess: async (response) => {
+        setLoading(true);
+        const order = await placeOrder({
+          customer: {
+            fullName: form.fullName,
+            email:    form.email,
+            phone:    form.phone,
+          },
+          delivery: {
+            address:    form.address,
+            city:       form.city,
+            state:      form.state,
+            postalCode: form.postalCode,
+          },
+          notes:          form.notes,
+          paymentMethod:  "Card Payment",
+          paystackRef:    response.reference,
+          items:          cart,
+          subtotal:       cartTotal,
+          shipping,
+          tax,
+          total,
+        });
+        clearCart();
+        setLoading(false);
+        navigate(`/order-confirmation/${order.id}`);
+      },
+      onClose: () => {
+        addToast({ message: "Payment cancelled", type: "info" });
+      },
+    });
+  } else {
+    // Pay on delivery
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 1000));
+    const order = await placeOrder({
       customer: {
-        fullName:  form.fullName,
-        email:     form.email,
-        phone:     form.phone,
+        fullName: form.fullName,
+        email:    form.email,
+        phone:    form.phone,
       },
       delivery: {
         address:    form.address,
@@ -137,18 +180,18 @@ export default function Checkout() {
         postalCode: form.postalCode,
       },
       notes:         form.notes,
-      paymentMethod: paymentMethod === "delivery" ? "Pay on Delivery" : "Card Payment",
+      paymentMethod: "Pay on Delivery",
       items:         cart,
       subtotal:      cartTotal,
       shipping,
       tax,
       total,
     });
-
     clearCart();
     setLoading(false);
     navigate(`/order-confirmation/${order.id}`);
-  };
+  }
+};
 
   if (cart.length === 0) {
     return (

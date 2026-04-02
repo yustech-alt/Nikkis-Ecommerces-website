@@ -1,9 +1,25 @@
-import { useState } from "react";
-import { products as initialProducts } from "../../data/products";
+import { useState, useEffect } from "react";
+import { getProducts, addProduct, updateProduct, deleteProduct } from "../../services/productService";
 import AdminLayout from "../components/AdminLayout";
+import { formatPrice } from "../../lib/format";
 
 export default function AdminProducts() {
-  const [products,    setProducts]    = useState(initialProducts);
+ const [products, setProducts] = useState([]);
+const [loading,  setLoading]  = useState(true);
+
+useEffect(() => {
+  const fetch = async () => {
+    try {
+      const data = await getProducts();
+      setProducts(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetch();
+}, []);
   const [search,      setSearch]      = useState("");
   const [filter,      setFilter]      = useState("all");
   const [showModal,   setShowModal]   = useState(false);
@@ -40,35 +56,43 @@ export default function AdminProducts() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!form.name || !form.price) return;
+ const handleSave = async () => {
+  if (!form.name || !form.price) return;
+  try {
     if (editProduct) {
-      setProducts((prev) => prev.map((p) =>
-        p.id === editProduct.id
-          ? { ...p, ...form, price: +form.price, oldPrice: +form.oldPrice, images: [form.image || p.images[0]] }
-          : p
-      ));
-    } else {
-      const newProduct = {
-        id:          Date.now(),
+      const updated = await updateProduct(editProduct.id, {
         ...form,
-        price:       +form.price,
-        oldPrice:    +form.oldPrice,
-        images:      [form.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"],
-        rating:      4.5,
-        reviews:     0,
-        specs:       {},
-      };
-      setProducts((prev) => [...prev, newProduct]);
+        price:    +form.price,
+        oldPrice: +form.oldPrice,
+        images:   [form.image || editProduct.images[0]],
+        specs:    editProduct.specs,
+      });
+      setProducts((prev) => prev.map((p) => p.id === editProduct.id ? updated : p));
+    } else {
+      const created = await addProduct({
+        ...form,
+        price:    +form.price,
+        oldPrice: +form.oldPrice,
+        images:   [form.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500"],
+        specs:    {},
+      });
+      setProducts((prev) => [created, ...prev]);
     }
     setShowModal(false);
-  };
+  } catch (err) {
+    console.error("Failed to save product:", err);
+  }
+};
 
-  const handleDelete = (id) => {
-    if (window.confirm("Delete this product?")) {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    }
-  };
+  const handleDelete = async (id) => {
+  if (!window.confirm("Delete this product?")) return;
+  try {
+    await deleteProduct(id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  } catch (err) {
+    console.error("Failed to delete product:", err);
+  }
+};
 
   const inputStyle = {
     backgroundColor: "#1a1a1a",
@@ -81,6 +105,17 @@ export default function AdminProducts() {
     outline: "none",
     fontFamily: "'DM Sans', sans-serif",
   };
+
+  if (loading) {
+  return (
+    <AdminLayout>
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-2 rounded-full animate-spin"
+          style={{ borderColor: "#a855f7", borderTopColor: "transparent" }} />
+      </div>
+    </AdminLayout>
+  );
+}
 
   return (
     <AdminLayout>

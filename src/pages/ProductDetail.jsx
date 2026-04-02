@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "../context/ToastContext";
 import { useParams, useNavigate } from "react-router-dom";
 import { products } from "../data/products";
@@ -7,6 +7,9 @@ import StarRating from "../components/ui/StarRating";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import ProductCard from "../components/ui/ProductCard";
+import { formatPrice } from "../lib/format";
+
+import { getProductById } from "../services/productService";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -14,11 +17,45 @@ export default function ProductDetail() {
   const { addItem, cart } = useCart();
   const { addToast } = useToast();
 
-  const product = products.find((p) => p.id === Number(id));
-  const [activeImg, setActiveImg]   = useState(0);
-  const [quantity, setQuantity]     = useState(1);
-  const [added, setAdded]           = useState(false);
-  const [activeTab, setActiveTab]   = useState("description");
+  const [activeImg, setActiveImg] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [activeTab, setActiveTab] = useState("description");
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await getProductById(id);
+        setProduct(data);
+      } catch {
+        // fallback to local data
+        const found = products.find((p) => p.id === Number(id));
+        setProduct(found || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: "var(--bg-primary)" }}
+      >
+        <div
+          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{
+            borderColor: "var(--accent)",
+            borderTopColor: "transparent",
+          }}
+        />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -30,7 +67,7 @@ export default function ProductDetail() {
   }
 
   const discount = Math.round(
-    ((product.oldPrice - product.price) / product.oldPrice) * 100
+    ((product.oldPrice - product.price) / product.oldPrice) * 100,
   );
 
   const related = products
@@ -40,28 +77,33 @@ export default function ProductDetail() {
   const inCart = cart.find((i) => i.id === product.id);
 
   const handleAdd = () => {
-  if (!product.inStock) return;
-  for (let i = 0; i < quantity; i++) addItem(product);
-  setAdded(true);
-  addToast({
-    message: `${quantity}× ${product.name} added to cart!`,
-    type: "success",
-  });
-  setTimeout(() => setAdded(false), 2000);
-};
+    if (!product.inStock) return;
+    for (let i = 0; i < quantity; i++) addItem(product);
+    setAdded(true);
+    addToast({
+      message: `${quantity}× ${product.name} added to cart!`,
+      type: "success",
+    });
+    setTimeout(() => setAdded(false), 2000);
+  };
 
   return (
     <div className="bg-[var(--bg-primary)] min-h-screen">
-
       {/* Breadcrumb */}
       <div className="border-b border-[var(--bg-elevated)] bg-[var(--bg-secondary)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <button onClick={() => navigate("/")} className="hover:text-[var(--accent)] transition-colors">
+            <button
+              onClick={() => navigate("/")}
+              className="hover:text-[var(--accent)] transition-colors"
+            >
               Home
             </button>
             <span>/</span>
-            <button onClick={() => navigate("/products")} className="hover:text-[var(--accent)] transition-colors">
+            <button
+              onClick={() => navigate("/products")}
+              className="hover:text-[var(--accent)] transition-colors"
+            >
               Products
             </button>
             <span>/</span>
@@ -72,16 +114,16 @@ export default function ProductDetail() {
               {product.category}
             </button>
             <span>/</span>
-            <span className="text-[#71717a] truncate max-w-[200px]">{product.name}</span>
+            <span className="text-[#71717a] truncate max-w-[200px]">
+              {product.name}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-
         {/* ── Main product section ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
-
           {/* Images */}
           <div className="flex flex-col gap-4">
             <div className="relative aspect-square bg-[#111] rounded-2xl overflow-hidden border border-[var(--border)]">
@@ -114,7 +156,11 @@ export default function ProductDetail() {
                         : "border-[var(--border)] hover:border-[var(--accent)]/40"
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   </button>
                 ))}
               </div>
@@ -133,14 +179,18 @@ export default function ProductDetail() {
             {/* Rating */}
             <div className="flex items-center gap-3 mb-6">
               <StarRating rating={product.rating} size={16} />
-              <span className="text-white font-semibold text-sm">{product.rating}</span>
-              <span className="text-[var(--text-muted)] text-sm">({product.reviews} reviews)</span>
+              <span className="text-white font-semibold text-sm">
+                {product.rating}
+              </span>
+              <span className="text-[var(--text-muted)] text-sm">
+                ({product.reviews} reviews)
+              </span>
             </div>
 
             {/* Price */}
             <div className="flex items-baseline gap-3 mb-6">
               <span className="syne text-4xl font-700 text-white">
-                ${product.price.toFixed(2)}
+                {formatPrice(product.price)}
               </span>
               <span className="text-[var(--text-muted)] text-lg line-through">
                 ${product.oldPrice.toFixed(2)}
@@ -152,8 +202,12 @@ export default function ProductDetail() {
 
             {/* Stock status */}
             <div className="flex items-center gap-2 mb-8">
-              <div className={`w-2 h-2 rounded-full ${product.inStock ? "bg-[#22c55e]" : "bg-[#f43f5e]"}`} />
-              <span className={`text-sm font-medium ${product.inStock ? "text-[#22c55e]" : "text-[#f43f5e]"}`}>
+              <div
+                className={`w-2 h-2 rounded-full ${product.inStock ? "bg-[#22c55e]" : "bg-[#f43f5e]"}`}
+              />
+              <span
+                className={`text-sm font-medium ${product.inStock ? "text-[#22c55e]" : "text-[#f43f5e]"}`}
+              >
                 {product.inStock ? "In Stock" : "Out of Stock"}
               </span>
               {inCart && (
@@ -171,8 +225,15 @@ export default function ProductDetail() {
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="w-11 h-11 flex items-center justify-center text-[#71717a] hover:text-white hover:bg-[var(--bg-elevated)] transition-colors"
                 >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M5 12h14"/>
+                  <svg
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M5 12h14" />
                   </svg>
                 </button>
                 <span className="w-10 text-center text-white font-semibold text-sm">
@@ -182,8 +243,15 @@ export default function ProductDetail() {
                   onClick={() => setQuantity((q) => q + 1)}
                   className="w-11 h-11 flex items-center justify-center text-[#71717a] hover:text-white hover:bg-[var(--bg-elevated)] transition-colors"
                 >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M12 5v14M5 12h14"/>
+                  <svg
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 5v14M5 12h14" />
                   </svg>
                 </button>
               </div>
@@ -198,15 +266,31 @@ export default function ProductDetail() {
               >
                 {added ? (
                   <>
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path d="M20 6L9 17l-5-5"/>
+                    <svg
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
                     </svg>
                     Added to Cart
                   </>
                 ) : (
                   <>
-                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+                    <svg
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                      <line x1="3" y1="6" x2="21" y2="6" />
+                      <path d="M16 10a4 4 0 01-8 0" />
                     </svg>
                     Add to Cart
                   </>
@@ -232,15 +316,40 @@ export default function ProductDetail() {
             {/* Trust row */}
             <div className="grid grid-cols-3 gap-4">
               {[
-                { icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>, label: "Authentic" },
-                { icon: <path d="M5 12h14M12 5l7 7-7 7"/>, label: "Fast Delivery" },
-                { icon: <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>, label: "Easy Returns" },
+                {
+                  icon: (
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  ),
+                  label: "Authentic",
+                },
+                {
+                  icon: <path d="M5 12h14M12 5l7 7-7 7" />,
+                  label: "Fast Delivery",
+                },
+                {
+                  icon: (
+                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                  ),
+                  label: "Easy Returns",
+                },
               ].map((t) => (
-                <div key={t.label} className="flex flex-col items-center gap-2 bg-[#111] rounded-xl p-3 border border-[var(--border)]">
-                  <svg width="18" height="18" fill="none" stroke="var(--accent)" strokeWidth="1.8" viewBox="0 0 24 24">
+                <div
+                  key={t.label}
+                  className="flex flex-col items-center gap-2 bg-[#111] rounded-xl p-3 border border-[var(--border)]"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="var(--accent)"
+                    strokeWidth="1.8"
+                    viewBox="0 0 24 24"
+                  >
                     {t.icon}
                   </svg>
-                  <span className="text-[#71717a] text-xs font-medium">{t.label}</span>
+                  <span className="text-[#71717a] text-xs font-medium">
+                    {t.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -278,8 +387,12 @@ export default function ProductDetail() {
                   key={key}
                   className="flex items-center justify-between bg-[#111] rounded-xl px-4 py-3 border border-[var(--border)]"
                 >
-                  <span className="text-[var(--text-muted)] text-sm">{key}</span>
-                  <span className="text-white text-sm font-medium">{value}</span>
+                  <span className="text-[var(--text-muted)] text-sm">
+                    {key}
+                  </span>
+                  <span className="text-white text-sm font-medium">
+                    {value}
+                  </span>
                 </div>
               ))}
             </div>

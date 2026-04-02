@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ADMIN_PASSWORD = "nikkis2025";
@@ -10,11 +10,15 @@ export default function AdminLogin() {
   const [loading,  setLoading]  = useState(false);
   const [show,     setShow]     = useState(false);
 
-  const isAuth = localStorage.getItem("nikkis_admin") === "true";
+ const isAuth = localStorage.getItem("nikkis_admin") === "true";
+
+useEffect(() => {
   if (isAuth) {
     navigate("/admin/dashboard");
-    return null;
   }
+}, [isAuth]);
+
+if (isAuth) return null;
 
   const handleLogin = async () => {
     if (!password.trim()) { setError("Please enter the admin password"); return; }

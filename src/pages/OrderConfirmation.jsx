@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useOrder } from "../context/OrderContext";
 import Button from "../components/ui/Button";
+import { formatPrice } from "../lib/format";
 
 export default function OrderConfirmation() {
   const { id } = useParams();

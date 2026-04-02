@@ -1,58 +1,59 @@
-import { createContext, useContext, useReducer, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { saveOrder, getOrders, getOrderById } from "../services/orderService";
 
 const OrderContext = createContext(null);
 
 const generateOrderId = () => {
-  const date = new Date();
+  const date   = new Date();
   const dateStr = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
-  const random = Math.floor(1000 + Math.random() * 9000);
+  const random  = Math.floor(1000 + Math.random() * 9000);
   return `NKS-${dateStr}-${random}`;
 };
 
-const orderReducer = (state, action) => {
-  switch (action.type) {
-    case "ADD_ORDER":
-      return [action.payload, ...state];
-    case "LOAD_ORDERS":
-      return action.payload;
-    default:
-      return state;
-  }
-};
-
 export function OrderProvider({ children }) {
-  const [orders, dispatch] = useReducer(
-    orderReducer,
-    [],
-    () => {
-      try {
-        const saved = localStorage.getItem("nikkis_orders");
-        return saved ? JSON.parse(saved) : [];
-      } catch {
-        return [];
-      }
-    }
-  );
+  const [orders,  setOrders]  = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("nikkis_orders", JSON.stringify(orders));
-  }, [orders]);
+    fetchOrders();
+  }, []);
 
-  const placeOrder = (orderData) => {
+  const fetchOrders = async () => {
+    try {
+      const data = await getOrders();
+      setOrders(data);
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const placeOrder = async (orderData) => {
     const order = {
-      id: generateOrderId(),
-      date: new Date().toISOString(),
+      id:     generateOrderId(),
+      date:   new Date().toISOString(),
       status: "pending",
       ...orderData,
     };
-    dispatch({ type: "ADD_ORDER", payload: order });
+
+    try {
+      await saveOrder(order);
+      setOrders((prev) => [order, ...prev]);
+    } catch (err) {
+      console.error("Failed to save order:", err);
+      // Fallback to localStorage if Supabase fails
+      const saved = JSON.parse(localStorage.getItem("nikkis_orders") || "[]");
+      localStorage.setItem("nikkis_orders", JSON.stringify([order, ...saved]));
+    }
+
     return order;
   };
 
   const getOrder = (id) => orders.find((o) => o.id === id);
 
   return (
-    <OrderContext.Provider value={{ orders, placeOrder, getOrder }}>
+    <OrderContext.Provider value={{ orders, loading, placeOrder, getOrder, fetchOrders }}>
       {children}
     </OrderContext.Provider>
   );

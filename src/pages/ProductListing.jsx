@@ -1,7 +1,8 @@
-import { useSearchParams } from "react-router-dom";
-import { products, categories } from "../data/products";
-import ProductCard from "../components/ui/ProductCard";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useProducts } from "../hooks/useProducts";
+import { categories } from "../data/products";
+import ProductCard from "../components/ui/ProductCard";
 import SkeletonCard from "../components/ui/SkeletonCard";
 
 const SORT_OPTIONS = [
@@ -13,18 +14,12 @@ const SORT_OPTIONS = [
 ];
 
 export default function ProductListing() {
-
-    const [loading, setLoading] = useState(true);
-
-useEffect(() => {
-  const t = setTimeout(() => setLoading(false), 800);
-  return () => clearTimeout(t);
-}, []);
-
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search,  setSearch]  = useState("");
-  const [sort,    setSort]    = useState("latest");
-  const [inStock, setInStock] = useState(false);
+  const [search,       setSearch]       = useState("");
+  const [sort,         setSort]         = useState("latest");
+  const [inStock,      setInStock]      = useState(false);
+
+  const { products, loading } = useProducts();
 
   const activeCategory = searchParams.get("category") || "all";
 
@@ -52,10 +47,12 @@ useEffect(() => {
       {/* Header */}
       <div style={{ borderBottom: "1px solid var(--border)", backgroundColor: "var(--bg-secondary)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--accent)" }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2"
+            style={{ color: "var(--accent)" }}>
             Our Store
           </p>
-          <h1 className="syne text-3xl sm:text-4xl" style={{ color: "var(--text-primary)", fontWeight: 700 }}>
+          <h1 className="syne text-3xl sm:text-4xl"
+            style={{ color: "var(--text-primary)", fontWeight: 700 }}>
             All Products
           </h1>
         </div>
@@ -87,7 +84,8 @@ useEffect(() => {
 
             {/* Categories */}
             <div className="mb-6">
-              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3"
+                style={{ color: "var(--text-muted)" }}>
                 Category
               </p>
               <div className="flex flex-col gap-1">
@@ -110,7 +108,8 @@ useEffect(() => {
 
             {/* In stock */}
             <div className="mb-6">
-              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3"
+                style={{ color: "var(--text-muted)" }}>
                 Availability
               </p>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -127,13 +126,16 @@ useEffect(() => {
                     style={{ transform: inStock ? "translateX(20px)" : "translateX(2px)" }}
                   />
                 </div>
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>In stock only</span>
+                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                  In stock only
+                </span>
               </label>
             </div>
 
             {/* Sort */}
             <div>
-              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[11px] uppercase tracking-widest font-semibold mb-3"
+                style={{ color: "var(--text-muted)" }}>
                 Sort by
               </p>
               <div className="flex flex-col gap-1">
@@ -156,41 +158,61 @@ useEffect(() => {
           </aside>
 
           {/* Grid */}
-          {loading ? (
-  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-    {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
-  </div>
-) : filtered.length > 0 ? (
-  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-    {filtered.map((product) => (
-      <ProductCard key={product.id} product={product} />
-    ))}
-  </div>
-) : (
-  <div className="flex flex-col items-center justify-center py-24 text-center">
-    <div
-      className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-      style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border)" }}
-    >
-      <svg width="28" height="28" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
-    </div>
-    <p className="font-semibold text-lg mb-2" style={{ color: "var(--text-primary)" }}>
-      No products found
-    </p>
-    <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-      Try adjusting your filters or search term
-    </p>
-    <button
-      onClick={() => { setSearch(""); setCategory("all"); setInStock(false); }}
-      className="text-white text-sm font-medium px-6 py-2.5 rounded-xl transition-colors"
-      style={{ backgroundColor: "var(--accent)" }}
-    >
-      Reset filters
-    </button>
-  </div>
-)}
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                <span className="font-medium" style={{ color: "var(--text-primary)" }}>
+                  {loading ? "..." : filtered.length}
+                </span> products found
+              </p>
+              {activeCategory !== "all" && (
+                <button
+                  onClick={() => setCategory("all")}
+                  className="text-xs px-3 py-1.5 rounded-full transition-all"
+                  style={{ color: "var(--accent)", border: "1px solid var(--accent-border)" }}
+                >
+                  Clear filter ×
+                </button>
+              )}
+            </div>
+
+            {/* Products */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : filtered.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {filtered.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                  style={{ backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border)" }}
+                >
+                  <svg width="28" height="28" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                </div>
+                <p className="font-semibold text-lg mb-2" style={{ color: "var(--text-primary)" }}>
+                  No products found
+                </p>
+                <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+                  Try adjusting your filters or search term
+                </p>
+                <button
+                  onClick={() => { setSearch(""); setCategory("all"); setInStock(false); }}
+                  className="text-white text-sm font-medium px-6 py-2.5 rounded-xl transition-colors"
+                  style={{ backgroundColor: "var(--accent)" }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

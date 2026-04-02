@@ -1,10 +1,26 @@
-import { useMemo, useState } from "react";
-import { useOrder } from "../../context/OrderContext";
+import { useMemo, useState, useEffect } from "react";
+import { getOrders } from "../../services/orderService";
 import AdminLayout from "../components/AdminLayout";
+import { formatPrice } from "../../lib/format";
 
 export default function AdminCustomers() {
-  const { orders } = useOrder();
-  const [search, setSearch] = useState("");
+  const [orders,  setOrders]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const data = await getOrders();
+        setOrders(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, []);
 
   const customers = useMemo(() => {
     const map = {};
@@ -35,12 +51,25 @@ export default function AdminCustomers() {
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-24">
+          <div className="w-8 h-8 border-2 rounded-full animate-spin"
+            style={{ borderColor: "#a855f7", borderTopColor: "transparent" }} />
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <style>{`.syne { font-family: 'Syne', sans-serif; }`}</style>
 
       <div className="mb-8">
-        <h1 className="syne text-2xl font-700 text-white mb-1" style={{ fontWeight: 700 }}>Customers</h1>
+        <h1 className="syne text-2xl font-700 text-white mb-1" style={{ fontWeight: 700 }}>
+          Customers
+        </h1>
         <p className="text-sm" style={{ color: "#71717a" }}>
           All guest buyers from order history
         </p>
@@ -49,16 +78,32 @@ export default function AdminCustomers() {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
-          { label: "Total Customers", value: customers.length,                                                            color: "#a855f7" },
-          { label: "Total Revenue",   value: `$${customers.reduce((s, c) => s + c.totalSpent, 0).toFixed(2)}`,           color: "#22c55e" },
-          { label: "Avg Order Value", value: `$${customers.length ? (customers.reduce((s, c) => s + c.totalSpent, 0) / orders.length).toFixed(2) : "0.00"}`, color: "#3b82f6" },
+          {
+            label: "Total Customers",
+            value: customers.length,
+            color: "#a855f7",
+          },
+          {
+            label: "Total Revenue",
+            value: `$${customers.reduce((s, c) => s + c.totalSpent, 0).toFixed(2)}`,
+            color: "#22c55e",
+          },
+          {
+            label: "Avg Order Value",
+            value: `$${customers.length
+              ? (customers.reduce((s, c) => s + c.totalSpent, 0) / orders.length).toFixed(2)
+              : "0.00"}`,
+            color: "#3b82f6",
+          },
         ].map((s) => (
           <div
             key={s.label}
             className="rounded-2xl p-5"
             style={{ backgroundColor: "#111", border: "1px solid #1f1f1f" }}
           >
-            <p className="text-2xl font-700 syne text-white mb-1" style={{ fontWeight: 700 }}>{s.value}</p>
+            <p className="text-2xl font-700 syne text-white mb-1" style={{ fontWeight: 700 }}>
+              {s.value}
+            </p>
             <p className="text-sm" style={{ color: "#71717a" }}>{s.label}</p>
           </div>
         ))}
@@ -104,9 +149,11 @@ export default function AdminCustomers() {
               <thead>
                 <tr style={{ borderBottom: "1px solid #1f1f1f" }}>
                   {["Customer", "Email", "Phone", "Orders", "Total Spent", "Last Order"].map((h) => (
-                    <th key={h}
+                    <th
+                      key={h}
                       className="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest"
-                      style={{ color: "#52525b" }}>
+                      style={{ color: "#52525b" }}
+                    >
                       {h}
                     </th>
                   ))}
@@ -144,7 +191,9 @@ export default function AdminCustomers() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-white">${c.totalSpent.toFixed(2)}</p>
+                      <p className="text-sm font-semibold text-white">
+                        ${c.totalSpent.toFixed(2)}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm" style={{ color: "#71717a" }}>

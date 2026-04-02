@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useOrder } from "../../context/OrderContext";
+import { useState, useEffect } from "react";
+import { getOrders, updateOrderStatus } from "../../services/orderService";
 import AdminLayout from "../components/AdminLayout";
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
@@ -13,22 +13,36 @@ const statusColor = {
 };
 
 export default function AdminOrders() {
-  const { orders, placeOrder } = useOrder();
-  const [search,        setSearch]        = useState("");
-  const [filterStatus,  setFilterStatus]  = useState("all");
-  const [expanded,      setExpanded]      = useState(null);
-  const [localOrders,   setLocalOrders]   = useState(orders);
+  const [search,       setSearch]       = useState("");
+const [filterStatus, setFilterStatus] = useState("all");
+const [expanded,     setExpanded]     = useState(null);
+const [localOrders,  setLocalOrders]  = useState([]);
+const [loading,      setLoading]      = useState(true);
 
-  const updateStatus = (orderId, newStatus) => {
-    setLocalOrders((prev) =>
-      prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o)
-    );
+useEffect(() => {
+  const fetch = async () => {
     try {
-      const saved = JSON.parse(localStorage.getItem("nikkis_orders") || "[]");
-      const updated = saved.map((o) => o.id === orderId ? { ...o, status: newStatus } : o);
-      localStorage.setItem("nikkis_orders", JSON.stringify(updated));
-    } catch {}
+      const data = await getOrders();
+      setLocalOrders(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
+  fetch();
+}, []);
+
+const updateStatus = async (orderId, newStatus) => {
+  setLocalOrders((prev) =>
+    prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o)
+  );
+  try {
+    await updateOrderStatus(orderId, newStatus);
+  } catch (err) {
+    console.error("Failed to update status:", err);
+  }
+};
 
   const filtered = localOrders
     .filter((o) => filterStatus === "all" || o.status === filterStatus)
@@ -37,6 +51,16 @@ export default function AdminOrders() {
       o.customer.fullName.toLowerCase().includes(search.toLowerCase()) ||
       o.customer.email.toLowerCase().includes(search.toLowerCase())
     );
+    if (loading) {
+  return (
+    <AdminLayout>
+      <div className="flex items-center justify-center py-24">
+        <div className="w-8 h-8 border-2 rounded-full animate-spin"
+          style={{ borderColor: "#a855f7", borderTopColor: "transparent" }} />
+      </div>
+    </AdminLayout>
+  );
+}
 
   return (
     <AdminLayout>
